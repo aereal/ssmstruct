@@ -45,6 +45,8 @@ func decodeScalar(val string, fieldValue reflect.Value) error {
 		default:
 			return fmt.Errorf("invalid boolean: %s", val)
 		}
+	default:
+		return fmt.Errorf("%T is cannot be unmarshaled", kind)
 	}
 	return nil
 }
