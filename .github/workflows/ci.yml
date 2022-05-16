@@ -18,6 +18,7 @@ jobs:
           github_token: ${{ github.token }}
           level: warning
           reporter: github-pr-review
+          filter_mode: file
   test:
     runs-on: ubuntu-latest
     steps:
