@@ -10,10 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-type decoder struct {
-	structType reflect.Value
-}
-
 const (
 	sliceDelim = ","
 )
@@ -53,17 +49,17 @@ func decodeScalar(val string, fieldValue reflect.Value) error {
 	return nil
 }
 
-func (d *decoder) decode(params []types.Parameter) error {
+func decode(structType reflect.Value, params []types.Parameter) error {
 	byName := map[string]types.Parameter{}
 	for _, p := range params {
 		byName[*p.Name] = p
 	}
 
-	typ := d.structType.Type()
+	typ := structType.Type()
 	numField := typ.NumField()
 	for i := 0; i < numField; i++ {
 		field := typ.Field(i)
-		fieldValue := d.structType.Field(i)
+		fieldValue := structType.Field(i)
 		tag := parseTag(field.Tag)
 		if tag == nil {
 			continue
@@ -109,8 +105,7 @@ func Unmarshal(params []types.Parameter, v interface{}) error {
 		return errors.New("v must be a pointer to the struct type")
 	}
 
-	dec := &decoder{structType: vt.Elem()}
-	return dec.decode(params)
+	return decode(vt.Elem(), params)
 }
 
 var (
