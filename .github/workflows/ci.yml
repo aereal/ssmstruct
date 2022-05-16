@@ -31,4 +31,8 @@ jobs:
             go-
       - run: go mod download
       - name: test
-        run: go test -v -race -cover ./...
+        run: go test -v -race -coverprofile=cover.out ./...
+      - name: upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cover.out
