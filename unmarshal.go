@@ -1,6 +1,7 @@
 package ssmstruct
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"reflect"
@@ -14,7 +15,21 @@ const (
 	sliceDelim = ","
 )
 
+var (
+	textUnmarshaler = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+)
+
 func decodeScalar(val string, fieldValue reflect.Value) error {
+	if fieldValue.Type().Implements(textUnmarshaler) {
+		fv := fieldValue
+		if fv.IsNil() {
+			fv.Set(reflect.New(fv.Type().Elem()))
+		}
+		if v, ok := fv.Interface().(encoding.TextUnmarshaler); ok {
+			return v.UnmarshalText([]byte(val))
+		}
+	}
+
 	switch kind := fieldValue.Kind(); kind {
 	case reflect.String:
 		fieldValue.SetString(val)
