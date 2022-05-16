@@ -25,6 +25,15 @@ func TestUnmarshal(t *testing.T) {
 			&testStruct{Str: "strValue", Int: 64, Uint: 128, Boolean: true},
 			false,
 		},
+		{
+			"ok/slice",
+			[]types.Parameter{
+				{Name: strRef("strSlice"), Type: types.ParameterTypeStringList, Value: strRef("a,b,c")},
+				{Name: strRef("intSlice"), Type: types.ParameterTypeStringList, Value: strRef("1,2,3")},
+			},
+			&testStruct{StrSlice: []string{"a", "b", "c"}, IntSlice: []int{1, 2, 3}},
+			false,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -42,10 +51,12 @@ func TestUnmarshal(t *testing.T) {
 }
 
 type testStruct struct {
-	Str     string `ssmp:"str"`
-	Int     int    `ssmp:"int"`
-	Uint    uint   `ssmp:"uint"`
-	Boolean bool   `ssmp:"boolean"`
+	Str      string   `ssmp:"str"`
+	Int      int      `ssmp:"int"`
+	Uint     uint     `ssmp:"uint"`
+	Boolean  bool     `ssmp:"boolean"`
+	StrSlice []string `ssmp:"strSlice"`
+	IntSlice []int    `ssmp:"intSlice"`
 }
 
 func strRef(s string) *string {

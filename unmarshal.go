@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
@@ -12,6 +13,10 @@ import (
 type decoder struct {
 	structType reflect.Value
 }
+
+const (
+	sliceDelim = ","
+)
 
 func decodeScalar(val string, fieldValue reflect.Value) error {
 	switch kind := fieldValue.Kind(); kind {
@@ -68,8 +73,31 @@ func (d *decoder) decode(params []types.Parameter) error {
 			continue
 		}
 		val := *param.Value
-		if err := decodeScalar(val, fieldValue); err != nil {
-			return err
+		switch kind := fieldValue.Kind(); kind {
+		case reflect.Slice:
+			if param.Type != types.ParameterTypeStringList {
+				return fmt.Errorf("cannot convert %s to slice", param.Type)
+			}
+			els := strings.Split(val, sliceDelim)
+
+			size := len(els)
+			// grow slice size
+			if size >= fieldValue.Cap() {
+				nv := reflect.MakeSlice(fieldValue.Type(), fieldValue.Len(), size)
+				reflect.Copy(nv, fieldValue)
+				fieldValue.Set(nv)
+				fieldValue.SetLen(size)
+			}
+
+			for i, el := range els {
+				if err := decodeScalar(el, fieldValue.Index(i)); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := decodeScalar(val, fieldValue); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
