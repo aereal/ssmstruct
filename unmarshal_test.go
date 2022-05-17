@@ -1,4 +1,4 @@
-package ssmstruct
+package paramsenc
 
 import (
 	"strings"

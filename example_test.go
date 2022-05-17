@@ -1,4 +1,4 @@
-package ssmstruct
+package paramsenc
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func ExampleDecoder_Decode() {
 	}
 	fmt.Printf("%#v\n", v)
 	// Output:
-	// ssmstruct.x{Str:"strValue", Int:64, StrSlice:[]string{"a", "b", "c"}}
+	// paramsenc.x{Str:"strValue", Int:64, StrSlice:[]string{"a", "b", "c"}}
 }
 
 func ExampleDecoder_Decode_withPathPrefix() {
@@ -43,5 +43,5 @@ func ExampleDecoder_Decode_withPathPrefix() {
 	}
 	fmt.Printf("%#v\n", v)
 	// Output:
-	// ssmstruct.x{Str:"strValue", Int:64, StrSlice:[]string{"a", "b", "c"}}
+	// paramsenc.x{Str:"strValue", Int:64, StrSlice:[]string{"a", "b", "c"}}
 }

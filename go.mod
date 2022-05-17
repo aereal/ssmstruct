@@ -1,4 +1,4 @@
-module github.com/aereal/ssmstruct
+module github.com/aereal/paramsenc
 
 go 1.18
 
