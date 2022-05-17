@@ -19,6 +19,81 @@ var (
 	textUnmarshaler = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 )
 
+// NewDecoder returns a new decoder that reads from params.
+func NewDecoder(params []types.Parameter) *Decoder {
+	return &Decoder{params: params}
+}
+
+// Decoder decodes values from fetched SSM parameters.
+type Decoder struct {
+	params []types.Parameter
+}
+
+// Decode decodes SSM parameters that previously given into Go values.
+//
+// Supported Go value types are:
+// - string
+// - int family
+// - slices
+//   - the element type must be also Decode()'s supported type
+//   - only string list parameter can be decoded
+// - the type implements encoding.TextUnmarshaler
+func (d *Decoder) Decode(v interface{}) error {
+	vt := reflect.ValueOf(v)
+	if vt.IsNil() || !(vt.Kind() == reflect.Pointer && vt.Elem().Kind() == reflect.Struct) {
+		return errors.New("v must be a pointer to the struct type")
+	}
+
+	byName := map[string]types.Parameter{}
+	for _, p := range d.params {
+		byName[*p.Name] = p
+	}
+
+	structType := vt.Elem()
+	typ := structType.Type()
+	numField := typ.NumField()
+	for i := 0; i < numField; i++ {
+		field := typ.Field(i)
+		fieldValue := structType.Field(i)
+		tag := parseTag(field.Tag)
+		if tag == nil {
+			continue
+		}
+		param, ok := byName[tag.name]
+		if !ok {
+			continue
+		}
+		val := *param.Value
+		switch kind := fieldValue.Kind(); kind {
+		case reflect.Slice:
+			if param.Type != types.ParameterTypeStringList {
+				return fmt.Errorf("cannot convert %s to slice", param.Type)
+			}
+			els := strings.Split(val, sliceDelim)
+
+			size := len(els)
+			// grow slice size
+			if size >= fieldValue.Cap() {
+				nv := reflect.MakeSlice(fieldValue.Type(), fieldValue.Len(), size)
+				reflect.Copy(nv, fieldValue)
+				fieldValue.Set(nv)
+				fieldValue.SetLen(size)
+			}
+
+			for i, el := range els {
+				if err := decodeScalar(el, fieldValue.Index(i)); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := decodeScalar(val, fieldValue); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func decodeScalar(val string, fieldValue reflect.Value) error {
 	if fieldValue.Type().Implements(textUnmarshaler) {
 		fv := fieldValue
@@ -66,63 +141,8 @@ func decodeScalar(val string, fieldValue reflect.Value) error {
 	return nil
 }
 
-func decode(structType reflect.Value, params []types.Parameter) error {
-	byName := map[string]types.Parameter{}
-	for _, p := range params {
-		byName[*p.Name] = p
-	}
-
-	typ := structType.Type()
-	numField := typ.NumField()
-	for i := 0; i < numField; i++ {
-		field := typ.Field(i)
-		fieldValue := structType.Field(i)
-		tag := parseTag(field.Tag)
-		if tag == nil {
-			continue
-		}
-		param, ok := byName[tag.name]
-		if !ok {
-			continue
-		}
-		val := *param.Value
-		switch kind := fieldValue.Kind(); kind {
-		case reflect.Slice:
-			if param.Type != types.ParameterTypeStringList {
-				return fmt.Errorf("cannot convert %s to slice", param.Type)
-			}
-			els := strings.Split(val, sliceDelim)
-
-			size := len(els)
-			// grow slice size
-			if size >= fieldValue.Cap() {
-				nv := reflect.MakeSlice(fieldValue.Type(), fieldValue.Len(), size)
-				reflect.Copy(nv, fieldValue)
-				fieldValue.Set(nv)
-				fieldValue.SetLen(size)
-			}
-
-			for i, el := range els {
-				if err := decodeScalar(el, fieldValue.Index(i)); err != nil {
-					return err
-				}
-			}
-		default:
-			if err := decodeScalar(val, fieldValue); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func Unmarshal(params []types.Parameter, v interface{}) error {
-	vt := reflect.ValueOf(v)
-	if vt.IsNil() || !(vt.Kind() == reflect.Pointer && vt.Elem().Kind() == reflect.Struct) {
-		return errors.New("v must be a pointer to the struct type")
-	}
-
-	return decode(vt.Elem(), params)
+	return NewDecoder(params).Decode(v)
 }
 
 var (
