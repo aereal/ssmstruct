@@ -8,6 +8,42 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestUnmarshal_nested(t *testing.T) {
+	testCases := []struct {
+		name       string
+		parameters []types.Parameter
+		opts       []Option
+		want       *outer1
+		wantErr    bool
+	}{
+		{
+			"ok",
+			[]types.Parameter{
+				{Name: strRef("/outerStr"), Type: types.ParameterTypeString, Value: strRef("outer")},
+				{Name: strRef("/inner/str"), Type: types.ParameterTypeString, Value: strRef("str")},
+				{Name: strRef("/inner/int"), Type: types.ParameterTypeString, Value: strRef("345")},
+			},
+			nil,
+			&outer1{OuterStr: "outer", Inner: inner{Str: "str", Int: 345}},
+			false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dec := NewDecoder(tc.parameters, tc.opts...)
+			var got outer1
+			err := dec.Decode(&got)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Fatalf("wantErr=%v but got=%v", tc.wantErr, gotErr)
+			}
+			if diff := cmp.Diff(tc.want, &got); diff != "" {
+				t.Errorf("-want, +got:\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestUnmarshal(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -144,6 +180,16 @@ type testStruct struct {
 	IntSlice []int    `ssmp:"/intSlice"`
 	Pair     *pair    `ssmp:"/pair"`
 	Pairs    []*pair  `ssmp:"/pairs"`
+}
+
+type inner struct {
+	Str string `ssmp:"/str"`
+	Int int    `ssmp:"/int"`
+}
+
+type outer1 struct {
+	OuterStr string `ssmp:"/outerStr"`
+	Inner    inner  `ssmp:"/inner"`
 }
 
 type pair struct {
