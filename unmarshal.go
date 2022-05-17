@@ -60,12 +60,20 @@ func (d *Decoder) Decode(v interface{}) error {
 	if vt.IsNil() || !(vt.Kind() == reflect.Pointer && vt.Elem().Kind() == reflect.Struct) {
 		return errors.New("v must be a pointer to the struct type")
 	}
+	return decode(vt, decodeOption{pathPrefix: d.pathPrefix, params: d.params})
+}
 
+type decodeOption struct {
+	pathPrefix string
+	params     []types.Parameter
+}
+
+func decode(vt reflect.Value, opts decodeOption) error {
 	byName := map[string]types.Parameter{}
-	for _, p := range d.params {
+	for _, p := range opts.params {
 		key := *p.Name
-		if d.pathPrefix != "" {
-			key = strings.TrimPrefix(key, d.pathPrefix)
+		if opts.pathPrefix != "" {
+			key = strings.TrimPrefix(key, opts.pathPrefix)
 		}
 		byName[key] = p
 	}
