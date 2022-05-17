@@ -53,6 +53,46 @@ func TestUnmarshal(t *testing.T) {
 				}},
 			false,
 		},
+		{
+			"ng/invalid int",
+			[]types.Parameter{
+				{Name: strRef("int"), Type: types.ParameterTypeString, Value: strRef("a")},
+			},
+			&testStruct{},
+			true,
+		},
+		{
+			"ng/invalid uint",
+			[]types.Parameter{
+				{Name: strRef("uint"), Type: types.ParameterTypeString, Value: strRef("a")},
+			},
+			&testStruct{},
+			true,
+		},
+		{
+			"ng/invalid boolean",
+			[]types.Parameter{
+				{Name: strRef("boolean"), Type: types.ParameterTypeString, Value: strRef("a")},
+			},
+			&testStruct{},
+			true,
+		},
+		{
+			"ng/invalid float32",
+			[]types.Parameter{
+				{Name: strRef("float32"), Type: types.ParameterTypeString, Value: strRef("a")},
+			},
+			&testStruct{},
+			true,
+		},
+		{
+			"ng/invalid float64",
+			[]types.Parameter{
+				{Name: strRef("float64"), Type: types.ParameterTypeString, Value: strRef("a")},
+			},
+			&testStruct{},
+			true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
