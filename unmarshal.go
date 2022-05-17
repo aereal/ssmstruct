@@ -20,13 +20,30 @@ var (
 )
 
 // NewDecoder returns a new decoder that reads from params.
-func NewDecoder(params []types.Parameter) *Decoder {
-	return &Decoder{params: params}
+func NewDecoder(params []types.Parameter, opts ...Option) *Decoder {
+	dec := &Decoder{params: params}
+	for _, opt := range opts {
+		opt(dec)
+	}
+	return dec
 }
 
 // Decoder decodes values from fetched SSM parameters.
 type Decoder struct {
-	params []types.Parameter
+	params     []types.Parameter
+	pathPrefix string
+}
+
+// Option is a function changes the decoder's behavior
+type Option func(d *Decoder)
+
+// WithPathPrefix returns an Option that indicates the decoder to treat pathPrefix as common prefix.
+//
+// The decoder searches corresponding parameter using its name without pathPrefix.
+func WithPathPrefix(pathPrefix string) Option {
+	return func(d *Decoder) {
+		d.pathPrefix = pathPrefix
+	}
 }
 
 // Decode decodes SSM parameters that previously given into Go values.
@@ -46,7 +63,11 @@ func (d *Decoder) Decode(v interface{}) error {
 
 	byName := map[string]types.Parameter{}
 	for _, p := range d.params {
-		byName[*p.Name] = p
+		key := *p.Name
+		if d.pathPrefix != "" {
+			key = strings.TrimPrefix(key, d.pathPrefix)
+		}
+		byName[key] = p
 	}
 
 	structType := vt.Elem()
