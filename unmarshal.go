@@ -126,6 +126,15 @@ func decodeScalar(val string, fieldValue reflect.Value) error {
 			return fmt.Errorf("cannot convert value %q: overflow uint size", val)
 		}
 		fieldValue.SetUint(n)
+	case reflect.Float32, reflect.Float64:
+		n, err := strconv.ParseFloat(val, fieldValue.Type().Bits())
+		if err != nil {
+			return fmt.Errorf("cannot convert value %q to %s: %w", val, kind, err)
+		}
+		if fieldValue.OverflowFloat(n) {
+			return fmt.Errorf("cannot conver value %q: overflow float size", val)
+		}
+		fieldValue.SetFloat(n)
 	case reflect.Bool:
 		switch val {
 		case "true":
