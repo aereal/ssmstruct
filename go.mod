@@ -1,6 +1,6 @@
 module github.com/aereal/paramsenc
 
-go 1.18
+go 1.19
 
 require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.1
