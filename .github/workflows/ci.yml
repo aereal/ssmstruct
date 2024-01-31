@@ -36,6 +36,6 @@ jobs:
       - name: test
         run: go test -v -race -coverprofile=cover.out ./...
       - name: upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: ./cover.out
