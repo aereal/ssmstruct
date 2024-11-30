@@ -60,17 +60,24 @@ func (d *Decoder) Decode(v interface{}) error {
 	if vt.IsNil() || !(vt.Kind() == reflect.Pointer && vt.Elem().Kind() == reflect.Struct) {
 		return errors.New("v must be a pointer to the struct type")
 	}
+	return decode(vt.Elem(), decodeOption{pathPrefix: d.pathPrefix, params: d.params})
+}
 
+type decodeOption struct {
+	pathPrefix string
+	params     []types.Parameter
+}
+
+func decode(structType reflect.Value, opts decodeOption) error {
 	byName := map[string]types.Parameter{}
-	for _, p := range d.params {
+	for _, p := range opts.params {
 		key := *p.Name
-		if d.pathPrefix != "" {
-			key = strings.TrimPrefix(key, d.pathPrefix)
+		if opts.pathPrefix != "" {
+			key = strings.TrimPrefix(key, opts.pathPrefix)
 		}
 		byName[key] = p
 	}
 
-	structType := vt.Elem()
 	typ := structType.Type()
 	numField := typ.NumField()
 	for i := 0; i < numField; i++ {
@@ -80,13 +87,15 @@ func (d *Decoder) Decode(v interface{}) error {
 		if tag == nil {
 			continue
 		}
-		param, ok := byName[tag.name]
-		if !ok {
-			continue
-		}
-		val := *param.Value
 		switch kind := fieldValue.Kind(); kind {
+		case reflect.Struct:
+			return decode(fieldValue, decodeOption{pathPrefix: opts.pathPrefix + tag.name, params: opts.params})
 		case reflect.Slice:
+			param, ok := byName[tag.name]
+			if !ok {
+				continue
+			}
+			val := *param.Value
 			if param.Type != types.ParameterTypeStringList {
 				return fmt.Errorf("cannot convert %s to slice", param.Type)
 			}
@@ -107,6 +116,11 @@ func (d *Decoder) Decode(v interface{}) error {
 				}
 			}
 		default:
+			param, ok := byName[tag.name]
+			if !ok {
+				continue
+			}
+			val := *param.Value
 			if err := decodeScalar(val, fieldValue); err != nil {
 				return err
 			}
